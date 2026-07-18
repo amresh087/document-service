@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.retail.document.dto.DocumentEventDTO;
 import com.retail.document.dto.DocumentRequest;
 import com.retail.document.dto.DocumentResponse;
 import com.retail.document.entity.DocumentRecord;
@@ -20,6 +21,7 @@ public class DocumentService {
 
     private final DocumentStorageService documentStorageService;
     private final DocumentRepository documentRepository;
+    private final DocumentEventProducer documentEventProducer;
 
     public DocumentResponse create(DocumentRequest request) {
         DocumentRecord record = DocumentRecord.builder()
@@ -34,7 +36,24 @@ public class DocumentService {
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
+        
+        // Save to database
         DocumentRecord saved = documentRepository.save(record);
+        
+        // Publish Kafka event after successful save
+        DocumentEventDTO eventDTO = DocumentEventDTO.builder()
+                .documentId(saved.getId())
+                .documentName(saved.getName())
+                .documentType(saved.getType())
+                .tenant(saved.getTenant())
+                .transactionTypeCode(saved.getTransactionTypeCode())
+                .status(saved.getStatus())
+                .objectName(saved.getObjectName())
+                .timestamp(saved.getCreatedAt())
+                .build();
+        
+        documentEventProducer.publishDocumentCreatedEvent(eventDTO);
+        
         return toResponse(saved);
     }
 
@@ -71,7 +90,24 @@ public class DocumentService {
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
+        
+        // Save to database
         DocumentRecord saved = documentRepository.save(record);
+        
+        // Publish Kafka event after successful save
+        DocumentEventDTO eventDTO = DocumentEventDTO.builder()
+                .documentId(saved.getId())
+                .documentName(saved.getName())
+                .documentType(saved.getType())
+                .tenant(saved.getTenant())
+                .transactionTypeCode(saved.getTransactionTypeCode())
+                .status(saved.getStatus())
+                .objectName(saved.getObjectName())
+                .timestamp(saved.getCreatedAt())
+                .build();
+        
+        documentEventProducer.publishDocumentCreatedEvent(eventDTO);
+        
         return toResponse(saved);
     }
 
@@ -120,7 +156,24 @@ public class DocumentService {
                 .createdAt(existing.getCreatedAt())
                 .updatedAt(LocalDateTime.now())
                 .build();
+        
+        // Save updated record to database
         DocumentRecord saved = documentRepository.save(updated);
+        
+        // Publish Kafka event after successful update
+        DocumentEventDTO eventDTO = DocumentEventDTO.builder()
+                .documentId(saved.getId())
+                .documentName(saved.getName())
+                .documentType(saved.getType())
+                .tenant(saved.getTenant())
+                .transactionTypeCode(saved.getTransactionTypeCode())
+                .status(saved.getStatus())
+                .objectName(saved.getObjectName())
+                .timestamp(saved.getUpdatedAt())
+                .build();
+        
+        documentEventProducer.publishDocumentUpdatedEvent(eventDTO);
+        
         return toResponse(saved);
     }
 
@@ -133,6 +186,20 @@ public class DocumentService {
         }
 
         documentRepository.deleteById(id);
+        
+        // Publish Kafka event after successful deletion
+        DocumentEventDTO eventDTO = DocumentEventDTO.builder()
+                .documentId(existing.getId())
+                .documentName(existing.getName())
+                .documentType(existing.getType())
+                .tenant(existing.getTenant())
+                .transactionTypeCode(existing.getTransactionTypeCode())
+                .status(existing.getStatus())
+                .objectName(existing.getObjectName())
+                .timestamp(LocalDateTime.now())
+                .build();
+        
+        documentEventProducer.publishDocumentDeletedEvent(eventDTO);
     }
 
     private DocumentResponse toResponse(DocumentRecord record) {
