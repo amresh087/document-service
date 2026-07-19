@@ -4,8 +4,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.retail.document.dto.DocumentEventDTO;
 import com.retail.document.dto.DocumentRequest;
@@ -64,10 +66,21 @@ public class DocumentService {
             throw new IllegalArgumentException("File must be provided for upload");
         }
 
+        String documentName = request.getName() != null ? request.getName().trim() : file.getOriginalFilename();
+        boolean skipDuplicateCheck = isTextFile(documentName) || isTextFile(file.getOriginalFilename());
+        if (!skipDuplicateCheck && documentName != null && !documentName.isBlank()) {
+            documentRepository.findByNameIgnoreCase(documentName)
+                    .ifPresent(existing -> {
+                        throw new ResponseStatusException(HttpStatus.CONFLICT,
+                                "File already exists. You can update it.");
+                    });
+        }
+
         UUID documentId = UUID.randomUUID();
         String contentType = normalizeContentType(request.getContentType(), file.getOriginalFilename());
-        String objectName = buildObjectName(documentId,
+        String objectName = buildObjectName(
                 request.getTenant(),
+                request.getTransactionTypeCode(),
                 normalizeType(request.getType()),
                 file.getOriginalFilename());
 
@@ -116,7 +129,21 @@ public class DocumentService {
     }
 
     public List<DocumentResponse> getAll() {
-        return documentRepository.findAll().stream().map(this::toResponse).toList();
+        return getAll(null);
+    }
+
+    public List<DocumentResponse> getAll(String mappingdoc) {
+        boolean shouldFilterMappingDocs = "mappingdoc".equalsIgnoreCase(mappingdoc);
+
+        List<DocumentRecord> records = shouldFilterMappingDocs
+                ? documentRepository.findByMappingTypeIn(List.of(
+                        "mapping-xslt-templet-xml",
+                        "idoc-output-sample"))
+                : documentRepository.findAll();
+
+        return records.stream()
+                .map(record -> toResponse(record, shouldFilterMappingDocs))
+                .toList();
     }
 
     public DocumentResponse getById(UUID id) {
@@ -141,7 +168,7 @@ public class DocumentService {
         if (existing.getObjectName() != null && !existing.getObjectName().isBlank()) {
             String currentFileName = existing.getObjectName().substring(existing.getObjectName().lastIndexOf('/') + 1);
             String targetFileName = updatedName == null ? currentFileName : updatedName.replaceAll("[^a-zA-Z0-9_.-]", "_");
-            String targetObjectName = buildObjectName(existing.getId(), updatedTenant, updatedType, targetFileName);
+            String targetObjectName = buildObjectName(updatedTenant, existing.getTransactionTypeCode(), updatedType, targetFileName);
             if (!existing.getObjectName().equals(targetObjectName)) {
                 documentStorageService.renameFile(existing.getObjectName(), targetObjectName);
                 newObjectName = targetObjectName;
@@ -210,10 +237,19 @@ public class DocumentService {
     }
 
     private DocumentResponse toResponse(DocumentRecord record) {
+        return toResponse(record, false);
+    }
+
+    private DocumentResponse toResponse(DocumentRecord record, boolean mappingDocMode) {
+        String resolvedType = record.getType();
+        if (mappingDocMode) {
+            resolvedType = isSupportedMappingType(record.getMappingType()) ? "XML" : "TXT";
+        }
+
         return DocumentResponse.builder()
                 .id(record.getId())
                 .name(record.getName())
-                .type(record.getType())
+                .type(resolvedType)
                 .tenant(record.getTenant())
                 .transactionTypeCode(record.getTransactionTypeCode())
                 .version(record.getVersion())
@@ -226,11 +262,53 @@ public class DocumentService {
                 .build();
     }
 
-    private String buildObjectName(UUID documentId, String tenant, String type, String originalFileName) {
+    private boolean isSupportedMappingType(String mappingType) {
+        return "mapping-xslt-templet-xml".equalsIgnoreCase(mappingType)
+                || "idoc-output-sample".equalsIgnoreCase(mappingType);
+    }
+
+    /*
+    private String buildObjectName(String tenant, String transactionTypeCode, String type, String originalFileName) {
         String safeTenant = tenant == null ? "tenant" : tenant.replaceAll("[^a-zA-Z0-9_.-]", "_");
+        String safeTransactionTypeCode = transactionTypeCode == null ? "transcode" : transactionTypeCode.replaceAll("[^a-zA-Z0-9_.-]", "_");
         String safeType = type == null ? "PDF" : type.replaceAll("[^a-zA-Z0-9_.-]", "_");
         String safeFileName = originalFileName == null ? "file" : originalFileName.replaceAll("[^a-zA-Z0-9_.-]", "_");
-        return String.format("tenant-%s/%s/%s", safeTenant, safeType, safeFileName);
+        return String.format("%s_%s_%s_%s", safeTenant, safeTransactionTypeCode, safeType, safeFileName);
+    }
+    */
+
+    private String buildObjectName(String tenant,
+            String transactionTypeCode,
+            String type,
+            String originalFileName) {
+
+        String safeTenant = tenant == null
+                ? "tenant"
+                : tenant.replaceAll("[^a-zA-Z0-9_.-]", "_");
+
+        String safeTransactionTypeCode = transactionTypeCode == null
+                ? "transcode"
+                : transactionTypeCode.replaceAll("[^a-zA-Z0-9_.-]", "_");
+
+        String safeType = type == null
+                ? "PDF"
+                : type.replaceAll("[^a-zA-Z0-9_.-]", "_");
+
+        String safeFileName = originalFileName == null
+                ? "file"
+                : originalFileName.replaceAll("[^a-zA-Z0-9_.-]", "_");
+
+        String prefixedFileName = String.format("%s-%s-%s-%s",
+                safeTenant,
+                safeTransactionTypeCode,
+                safeType,
+                safeFileName);
+
+        return String.format("%s/%s/%s/%s",
+                safeTenant,
+                safeTransactionTypeCode,
+                safeType,
+                prefixedFileName);
     }
 
     private String normalizeType(String type) {
@@ -247,9 +325,13 @@ public class DocumentService {
         if (name != null && name.toLowerCase().endsWith(".xml")) {
             return "application/xml";
         }
-        if (name != null && name.toLowerCase().endsWith(".txt")) {
+        if (isTextFile(name)) {
             return "text/plain";
         }
         return "application/pdf";
+    }
+
+    private boolean isTextFile(String name) {
+        return name != null && !name.isBlank() && name.toLowerCase().endsWith(".txt");
     }
 }
