@@ -122,8 +122,14 @@ public class DocumentService {
                 .objectName(saved.getObjectName())
                 .timestamp(saved.getCreatedAt())
                 .build();
-        
-        documentEventProducer.publishDocumentCreatedEvent(eventDTO);
+
+        if (saved.getType().equalsIgnoreCase("XML") ) {
+            documentEventProducer.publishDocumentCreatedEvent(eventDTO);
+        } else {
+           // documentEventProducer.publishDocumentCreatedEvent(eventDTO);
+        }
+
+       // documentEventProducer.publishDocumentCreatedEvent(eventDTO);
         
         return toResponse(saved);
     }
