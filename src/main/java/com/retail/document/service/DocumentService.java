@@ -30,6 +30,7 @@ public class DocumentService {
                 .type(normalizeType(request.getType()))
                 .tenant(request.getTenant())
                 .transactionTypeCode(request.getTransactionTypeCode())
+                .mappingType(request.getMappingType())
                 .version(request.getVersion())
                 .status(request.getStatus() != null ? request.getStatus() : "Indexed")
                 .contentType(normalizeContentType(request.getContentType(), request.getName()))
@@ -47,6 +48,7 @@ public class DocumentService {
                 .documentType(saved.getType())
                 .tenant(saved.getTenant())
                 .transactionTypeCode(saved.getTransactionTypeCode())
+                .mappingType(saved.getMappingType())
                 .status(saved.getStatus())
                 .objectName(saved.getObjectName())
                 .timestamp(saved.getCreatedAt())
@@ -83,6 +85,7 @@ public class DocumentService {
                 .type(normalizeType(request.getType()))
                 .tenant(request.getTenant())
                 .transactionTypeCode(request.getTransactionTypeCode())
+                .mappingType(request.getMappingType())
                 .version(request.getVersion())
                 .status(request.getStatus() != null ? request.getStatus() : "Indexed")
                 .contentType(contentType)
@@ -101,6 +104,7 @@ public class DocumentService {
                 .documentType(saved.getType())
                 .tenant(saved.getTenant())
                 .transactionTypeCode(saved.getTransactionTypeCode())
+                .mappingType(saved.getMappingType())
                 .status(saved.getStatus())
                 .objectName(saved.getObjectName())
                 .timestamp(saved.getCreatedAt())
@@ -131,6 +135,7 @@ public class DocumentService {
         String updatedVersion = request.getVersion() != null ? request.getVersion() : existing.getVersion();
         String updatedStatus = request.getStatus() != null ? request.getStatus() : existing.getStatus();
         String updatedContentType = normalizeContentType(request.getContentType(), updatedName);
+        String updatedMappingType = request.getMappingType() != null ? request.getMappingType() : existing.getMappingType();
 
         String newObjectName = existing.getObjectName();
         if (existing.getObjectName() != null && !existing.getObjectName().isBlank()) {
@@ -149,6 +154,7 @@ public class DocumentService {
                 .type(updatedType)
                 .tenant(updatedTenant)
                 .transactionTypeCode(request.getTransactionTypeCode() != null ? request.getTransactionTypeCode() : existing.getTransactionTypeCode())
+                .mappingType(updatedMappingType)
                 .version(updatedVersion)
                 .status(updatedStatus)
                 .contentType(updatedContentType)
@@ -167,6 +173,7 @@ public class DocumentService {
                 .documentType(saved.getType())
                 .tenant(saved.getTenant())
                 .transactionTypeCode(saved.getTransactionTypeCode())
+                .mappingType(saved.getMappingType())
                 .status(saved.getStatus())
                 .objectName(saved.getObjectName())
                 .timestamp(saved.getUpdatedAt())
@@ -212,6 +219,7 @@ public class DocumentService {
                 .version(record.getVersion())
                 .status(record.getStatus())
                 .contentType(record.getContentType())
+                .mappingType(record.getMappingType())
                 .objectName(record.getObjectName())
                 .createdAt(record.getCreatedAt())
                 .updatedAt(record.getUpdatedAt())

@@ -30,6 +30,9 @@ public class DocumentEventDTO {
     @JsonProperty("transaction_type_code")
     private String transactionTypeCode;
 
+    @JsonProperty("mapping_type")
+    private String mappingType;
+
     @JsonProperty("status")
     private String status;
 

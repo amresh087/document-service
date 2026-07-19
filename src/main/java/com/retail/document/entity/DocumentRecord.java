@@ -35,6 +35,9 @@ public class DocumentRecord {
     @Column(name = "transaction_type_code")
     private String transactionTypeCode;
 
+    @Column(name = "mapping_type")
+    private String mappingType;
+
     @Column(name = "object_name")
     private String objectName;
 
