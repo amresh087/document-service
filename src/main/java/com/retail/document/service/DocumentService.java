@@ -132,7 +132,7 @@ public class DocumentService {
             java.util.UUID jobId = java.util.UUID.randomUUID();
 
             // persist job status (existing lightweight tracking table)
-            jobStatusService.createJob(jobId, saved.getId(), "PENDING");
+            jobStatusService.createJob(jobId, saved.getId(), JobStatusType.SUBMITTED.getValue());
 
             // persist a full transformation_job record with payload metadata
             String payload = String.format("name=%s;tenant=%s;transactionType=%s", saved.getName(), saved.getTenant(), saved.getTransactionTypeCode());

@@ -21,7 +21,7 @@ public class TransformationJobService {
                 .id(jobId)
                 .documentId(documentId)
                 .jobName(jobName)
-                .status("PENDING")
+                .status(JobStatusType.SUBMITTED.getValue())
                 .payload(payload)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
@@ -43,7 +43,7 @@ public class TransformationJobService {
         if (job == null) {
             return null;
         }
-        job.setStatus(status);
+        job.setStatus(JobStatusType.fromValue(status).getValue());
         job.setUpdatedAt(LocalDateTime.now());
         return transformationJobRepository.save(job);
     }
