@@ -24,6 +24,8 @@ public class DocumentService {
     private final DocumentStorageService documentStorageService;
     private final DocumentRepository documentRepository;
     private final DocumentEventProducer documentEventProducer;
+    private final JobStatusService jobStatusService;
+    private final TransformationJobService transformationJobService;
 
     public DocumentResponse create(DocumentRequest request) {
         DocumentRecord record = DocumentRecord.builder()
@@ -126,10 +128,20 @@ public class DocumentService {
         if (saved.getType().equalsIgnoreCase("XML") ) {
             documentEventProducer.publishDocumentCreatedEvent(eventDTO);
         } else {
-           // documentEventProducer.publishDocumentCreatedEvent(eventDTO);
-        }
+            // For non-XML documents, create a transformation job and publish to the transformation topic
+            java.util.UUID jobId = java.util.UUID.randomUUID();
 
-       // documentEventProducer.publishDocumentCreatedEvent(eventDTO);
+            // persist job status (existing lightweight tracking table)
+            jobStatusService.createJob(jobId, saved.getId(), "PENDING");
+
+            // persist a full transformation_job record with payload metadata
+            String payload = String.format("name=%s;tenant=%s;transactionType=%s", saved.getName(), saved.getTenant(), saved.getTransactionTypeCode());
+            transformationJobService.createJob(jobId, saved.getId(), "edi-transformation", payload);
+
+            // attach job id to event and publish to the transformation topic
+            eventDTO.setJobId(jobId);
+            documentEventProducer.publishTransformationEvent(eventDTO);
+        }
         
         return toResponse(saved);
     }

@@ -42,12 +42,16 @@ public class DocumentEventDTO {
     @JsonProperty("event_type")
     private String eventType;
 
+    @JsonProperty("job_id")
+    private UUID jobId;
+
     @JsonProperty("timestamp")
     private LocalDateTime timestamp;
 
     public enum EventType {
         DOCUMENT_CREATED,
         DOCUMENT_UPDATED,
-        DOCUMENT_DELETED
+        DOCUMENT_DELETED,
+        TRANSFORMATION_REQUEST
     }
 }

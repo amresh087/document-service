@@ -24,6 +24,9 @@ public class DocumentEventProducer {
     @Value("${kafka.topics.document-events:document-events}")
     private String documentEventsTopic;
 
+    @Value("${kafka.topics.transformation-events:transformation-events}")
+    private String transformationEventsTopic;
+
     public void publishDocumentEvent(DocumentEventDTO event) {
         try {
             String key = event.getDocumentId().toString();
@@ -61,5 +64,31 @@ public class DocumentEventProducer {
     public void publishDocumentDeletedEvent(DocumentEventDTO event) {
         event.setEventType(DocumentEventDTO.EventType.DOCUMENT_DELETED.name());
         publishDocumentEvent(event);
+    }
+
+    public void publishTransformationEvent(DocumentEventDTO event) {
+        // mark event type for transformation requests
+        event.setEventType(DocumentEventDTO.EventType.TRANSFORMATION_REQUEST.name());
+        try {
+            String key = event.getDocumentId().toString();
+
+            Message<DocumentEventDTO> message = MessageBuilder
+                    .withPayload(event)
+                    .setHeader(KafkaHeaders.TOPIC, transformationEventsTopic)
+                    .setHeader(KafkaHeaders.KEY, key)
+                    .setHeader("event_type", event.getEventType())
+                    .setHeader("tenant", event.getTenant())
+                    .build();
+
+            kafkaTemplate.send(message);
+
+            logger.info("Published transformation event: eventType={}, documentId={}, tenant={}, jobId={}",
+                    event.getEventType(), event.getDocumentId(), event.getTenant(), event.getJobId());
+
+        } catch (Exception ex) {
+            logger.error("Failed to publish transformation event for documentId: {}",
+                    event.getDocumentId(), ex);
+            throw new RuntimeException("Failed to publish transformation event", ex);
+        }
     }
 }
