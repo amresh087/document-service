@@ -1,4 +1,4 @@
-package com.retail.document.service;
+package com.retail.document.dto;
 
 public enum JobStatusType {
     SUBMITTED("SUBMITTED"),

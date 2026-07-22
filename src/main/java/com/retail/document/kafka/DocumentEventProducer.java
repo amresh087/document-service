@@ -1,4 +1,4 @@
-package com.retail.document.service;
+package com.retail.document.kafka;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

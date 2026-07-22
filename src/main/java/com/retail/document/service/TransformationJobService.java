@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
+import com.retail.document.dto.JobStatusType;
 import com.retail.document.entity.TransformationJob;
 import com.retail.document.repository.TransformationJobRepository;
 

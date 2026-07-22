@@ -24,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.retail.document.dto.DocumentRequest;
 import com.retail.document.dto.DocumentResponse;
 import com.retail.document.entity.DocumentRecord;
+import com.retail.document.kafka.DocumentEventProducer;
 import com.retail.document.repository.DocumentRepository;
 
 @ExtendWith(MockitoExtension.class)

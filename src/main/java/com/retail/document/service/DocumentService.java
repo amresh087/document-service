@@ -12,7 +12,9 @@ import org.springframework.web.server.ResponseStatusException;
 import com.retail.document.dto.DocumentEventDTO;
 import com.retail.document.dto.DocumentRequest;
 import com.retail.document.dto.DocumentResponse;
+import com.retail.document.dto.JobStatusType;
 import com.retail.document.entity.DocumentRecord;
+import com.retail.document.kafka.DocumentEventProducer;
 import com.retail.document.repository.DocumentRepository;
 
 import lombok.RequiredArgsConstructor;
