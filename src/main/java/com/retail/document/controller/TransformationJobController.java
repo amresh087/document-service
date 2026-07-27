@@ -34,6 +34,11 @@ public class TransformationJobController {
         return ResponseEntity.created(URI.create(String.format("/api/transformation-jobs/%s", job.getId().toString()))).body(toResponse(job));
     }
 
+    @GetMapping
+    public ResponseEntity<java.util.List<TransformationJobResponse>> getAll() {
+        return ResponseEntity.ok(transformationJobService.getAllJobs().stream().map(this::toResponse).toList());
+    }
+
     @GetMapping("/document/{documentId}")
     public ResponseEntity<TransformationJobResponse> getByDocumentId(@PathVariable("documentId") UUID documentId) {
         TransformationJob job = transformationJobService.getJobByDocumentId(documentId);

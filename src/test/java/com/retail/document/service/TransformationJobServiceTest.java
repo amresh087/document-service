@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -41,5 +42,26 @@ class TransformationJobServiceTest {
 
         assertThat(actualJob).isSameAs(expectedJob);
         verify(transformationJobRepository).findFirstByDocumentIdOrderByCreatedAtDesc(documentId);
+    }
+
+    @Test
+    void getAllJobsReturnsAllTransformationJobs() {
+        TransformationJob firstJob = TransformationJob.builder()
+                .id(UUID.randomUUID())
+                .documentId(UUID.randomUUID())
+                .status("SUBMITTED")
+                .build();
+        TransformationJob secondJob = TransformationJob.builder()
+                .id(UUID.randomUUID())
+                .documentId(UUID.randomUUID())
+                .status("COMPLETED")
+                .build();
+
+        when(transformationJobRepository.findAll()).thenReturn(List.of(firstJob, secondJob));
+
+        List<TransformationJob> jobs = transformationJobService.getAllJobs();
+
+        assertThat(jobs).containsExactly(firstJob, secondJob);
+        verify(transformationJobRepository).findAll();
     }
 }

@@ -1,6 +1,7 @@
 package com.retail.document.service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -37,6 +38,10 @@ public class TransformationJobService {
 
     public TransformationJob getJobByDocumentId(UUID documentId) {
         return transformationJobRepository.findFirstByDocumentIdOrderByCreatedAtDesc(documentId).orElse(null);
+    }
+
+    public List<TransformationJob> getAllJobs() {
+        return transformationJobRepository.findAll();
     }
 
     public TransformationJob updateStatus(UUID id, String status) {
