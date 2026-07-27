@@ -27,11 +27,11 @@ public class TransformationJob {
     @Column(name = "document_id", nullable = false)
     private UUID documentId;
 
+    @Column(name = "job_id")
+    private UUID jobId;
+
     @Column(name = "job_name")
     private String jobName;
-
-    @Column(name = "status")
-    private String status;
 
     @Column(name = "payload", length = 4000)
     private String payload;

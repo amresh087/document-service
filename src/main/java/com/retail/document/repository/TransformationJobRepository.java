@@ -12,4 +12,6 @@ import com.retail.document.entity.TransformationJob;
 public interface TransformationJobRepository extends JpaRepository<TransformationJob, UUID> {
 
     Optional<TransformationJob> findFirstByDocumentIdOrderByCreatedAtDesc(UUID documentId);
+
+    void deleteByDocumentId(UUID documentId);
 }

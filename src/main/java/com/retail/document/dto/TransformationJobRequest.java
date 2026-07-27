@@ -9,5 +9,6 @@ public class TransformationJobRequest {
     private UUID id; // optional: caller can provide id
     private UUID documentId;
     private String jobName;
+    private String status;
     private String payload;
 }

@@ -19,13 +19,18 @@ public class JobStatusService {
 
     public JobStatus createJob(UUID jobId, UUID documentId, String status) {
         JobStatusType jobStatusType = JobStatusType.fromValue(status);
-        JobStatus job = JobStatus.builder()
+        JobStatus existingJob = jobStatusRepository.findById(jobId).orElse(null);
+
+        JobStatus job = existingJob != null ? existingJob : JobStatus.builder()
                 .id(jobId)
-                .documentId(documentId)
-                .status(jobStatusType.getValue())
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
                 .build();
+
+        job.setDocumentId(documentId);
+        job.setStatus(jobStatusType.getValue());
+        job.setUpdatedAt(LocalDateTime.now());
+        if (existingJob == null) {
+            job.setCreatedAt(LocalDateTime.now());
+        }
 
         return jobStatusRepository.save(job);
     }
@@ -39,5 +44,19 @@ public class JobStatusService {
         job.setStatus(JobStatusType.fromValue(status).getValue());
         job.setUpdatedAt(LocalDateTime.now());
         return jobStatusRepository.save(job);
+    }
+
+    public String getStatus(UUID jobId) {
+        if (jobId == null) {
+            return null;
+        }
+
+        return jobStatusRepository.findById(jobId)
+                .map(JobStatus::getStatus)
+                .orElse(null);
+    }
+
+    public void deleteByDocumentId(UUID documentId) {
+        jobStatusRepository.deleteByDocumentId(documentId);
     }
 }

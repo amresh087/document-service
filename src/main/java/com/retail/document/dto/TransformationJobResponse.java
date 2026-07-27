@@ -10,6 +10,7 @@ import lombok.Data;
 @Builder
 public class TransformationJobResponse {
     private UUID id;
+    private UUID jobId;
     private UUID documentId;
     private String jobName;
     private String status;

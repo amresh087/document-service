@@ -10,4 +10,5 @@ import com.retail.document.entity.JobStatus;
 @Repository
 public interface JobStatusRepository extends JpaRepository<JobStatus, UUID> {
 
+    void deleteByDocumentId(UUID documentId);
 }

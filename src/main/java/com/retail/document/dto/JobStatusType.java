@@ -2,6 +2,8 @@ package com.retail.document.dto;
 
 public enum JobStatusType {
     SUBMITTED("SUBMITTED"),
+    EDI_TEXT_TO_EDI_XML("EDI_TEXT_TO_EDI_XML"),
+    EDI_XML_TO_IDOC_XML("EDI_XML_TO_IDOC_XML"),
     PROCESSING("PROCESSING"),
     COMPLETED("COMPLETED"),
     PENDING("PENDING"),

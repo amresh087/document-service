@@ -133,10 +133,7 @@ public class DocumentService {
             // For non-XML documents, create a transformation job and publish to the transformation topic
             java.util.UUID jobId = java.util.UUID.randomUUID();
 
-            // persist job status (existing lightweight tracking table)
-            jobStatusService.createJob(jobId, saved.getId(), JobStatusType.SUBMITTED.getValue());
-
-            // persist a full transformation_job record with payload metadata
+            // persist a full transformation_job record with payload metadata and a matching job_status row
             String payload = String.format("name=%s;tenant=%s;transactionType=%s", saved.getName(), saved.getTenant(), saved.getTransactionTypeCode());
             transformationJobService.createJob(jobId, saved.getId(), "edi-transformation", payload);
 
@@ -240,6 +237,10 @@ public class DocumentService {
         }
 
         documentRepository.deleteById(id);
+
+        // Clean up matching job status rows for any transformation jobs linked to this document
+        jobStatusService.deleteByDocumentId(id);
+        transformationJobService.deleteByDocumentId(id);
         
         // Publish Kafka event after successful deletion
         DocumentEventDTO eventDTO = DocumentEventDTO.builder()

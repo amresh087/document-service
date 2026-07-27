@@ -17,19 +17,23 @@ import lombok.RequiredArgsConstructor;
 public class TransformationJobService {
 
     private final TransformationJobRepository transformationJobRepository;
+    private final JobStatusService jobStatusService;
 
     public TransformationJob createJob(UUID jobId, UUID documentId, String jobName, String payload) {
         TransformationJob job = TransformationJob.builder()
                 .id(jobId)
+                .jobId(jobId)
                 .documentId(documentId)
                 .jobName(jobName)
-                .status(JobStatusType.SUBMITTED.getValue())
                 .payload(payload)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
 
-        return transformationJobRepository.save(job);
+        TransformationJob savedJob = transformationJobRepository.save(job);
+        jobStatusService.createJob(savedJob.getId(), documentId, JobStatusType.SUBMITTED.getValue());
+
+        return savedJob;
     }
 
     public TransformationJob getJob(UUID id) {
@@ -44,13 +48,32 @@ public class TransformationJobService {
         return transformationJobRepository.findAll();
     }
 
+    public void deleteByDocumentId(UUID documentId) {
+        transformationJobRepository.deleteByDocumentId(documentId);
+    }
+
     public TransformationJob updateStatus(UUID id, String status) {
         TransformationJob job = transformationJobRepository.findById(id).orElse(null);
         if (job == null) {
             return null;
         }
-        job.setStatus(JobStatusType.fromValue(status).getValue());
+
+        String normalizedStatus = JobStatusType.fromValue(status).getValue();
         job.setUpdatedAt(LocalDateTime.now());
-        return transformationJobRepository.save(job);
+        TransformationJob savedJob = transformationJobRepository.save(job);
+
+        if (savedJob.getId() != null) {
+            jobStatusService.updateStatus(savedJob.getId(), normalizedStatus);
+        }
+
+        return savedJob;
+    }
+
+    public String getLatestStatus(UUID jobId) {
+        if (jobId == null) {
+            return null;
+        }
+
+        return jobStatusService.getStatus(jobId);
     }
 }

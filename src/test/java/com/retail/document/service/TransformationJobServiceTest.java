@@ -1,6 +1,7 @@
 package com.retail.document.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -14,6 +15,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.retail.document.entity.JobStatus;
 import com.retail.document.entity.TransformationJob;
 import com.retail.document.repository.TransformationJobRepository;
 
@@ -22,6 +24,9 @@ class TransformationJobServiceTest {
 
     @Mock
     private TransformationJobRepository transformationJobRepository;
+
+    @Mock
+    private JobStatusService jobStatusService;
 
     @InjectMocks
     private TransformationJobService transformationJobService;
@@ -32,7 +37,6 @@ class TransformationJobServiceTest {
         TransformationJob expectedJob = TransformationJob.builder()
                 .id(UUID.randomUUID())
                 .documentId(documentId)
-                .status("PENDING")
                 .build();
 
         when(transformationJobRepository.findFirstByDocumentIdOrderByCreatedAtDesc(documentId))
@@ -49,12 +53,10 @@ class TransformationJobServiceTest {
         TransformationJob firstJob = TransformationJob.builder()
                 .id(UUID.randomUUID())
                 .documentId(UUID.randomUUID())
-                .status("SUBMITTED")
                 .build();
         TransformationJob secondJob = TransformationJob.builder()
                 .id(UUID.randomUUID())
                 .documentId(UUID.randomUUID())
-                .status("COMPLETED")
                 .build();
 
         when(transformationJobRepository.findAll()).thenReturn(List.of(firstJob, secondJob));
@@ -63,5 +65,26 @@ class TransformationJobServiceTest {
 
         assertThat(jobs).containsExactly(firstJob, secondJob);
         verify(transformationJobRepository).findAll();
+    }
+
+    @Test
+    void updateStatusPropagatesToTransformationJobAndJobStatusRecord() {
+        UUID jobId = UUID.randomUUID();
+        UUID documentId = UUID.randomUUID();
+        TransformationJob existingJob = TransformationJob.builder()
+                .id(jobId)
+                .documentId(documentId)
+                .build();
+
+        when(transformationJobRepository.findById(jobId)).thenReturn(Optional.of(existingJob));
+        when(transformationJobRepository.save(any(TransformationJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(jobStatusService.updateStatus(jobId, "COMPLETED"))
+                .thenReturn(JobStatus.builder().id(jobId).documentId(documentId).status("COMPLETED").build());
+
+        TransformationJob actualJob = transformationJobService.updateStatus(jobId, "COMPLETED");
+
+        assertThat(actualJob).isNotNull();
+        verify(jobStatusService).updateStatus(jobId, "COMPLETED");
+        verify(transformationJobRepository).save(existingJob);
     }
 }

@@ -51,7 +51,11 @@ public class TransformationJobController {
 
     @PutMapping("/{id}")
     public ResponseEntity<TransformationJobResponse> updateStatus(@PathVariable("id") UUID id, @RequestBody TransformationJobRequest request) {
-        TransformationJob job = transformationJobService.updateStatus(id, request.getPayload() == null ? request.getJobName() : request.getPayload());
+        String status = request.getStatus() != null
+                ? request.getStatus()
+                : request.getPayload() != null ? request.getPayload() : request.getJobName();
+
+        TransformationJob job = transformationJobService.updateStatus(id, status);
         if (job == null) {
             return ResponseEntity.notFound().build();
         }
@@ -60,11 +64,13 @@ public class TransformationJobController {
     }
 
     private TransformationJobResponse toResponse(TransformationJob job) {
+        String latestStatus = transformationJobService.getLatestStatus(job.getId());
         return TransformationJobResponse.builder()
                 .id(job.getId())
+                .jobId(job.getJobId())
                 .documentId(job.getDocumentId())
                 .jobName(job.getJobName())
-                .status(job.getStatus())
+                .status(latestStatus)
                 .payload(job.getPayload())
                 .createdAt(job.getCreatedAt())
                 .updatedAt(job.getUpdatedAt())
