@@ -87,4 +87,23 @@ class TransformationJobServiceTest {
         verify(jobStatusService).updateStatus(jobId, "COMPLETED");
         verify(transformationJobRepository).save(existingJob);
     }
+
+    @Test
+    void updateStatusMapsHumanReadableCompletionMessageToCompletedStatus() {
+        UUID jobId = UUID.randomUUID();
+        UUID documentId = UUID.randomUUID();
+        TransformationJob existingJob = TransformationJob.builder()
+                .id(jobId)
+                .documentId(documentId)
+                .build();
+
+        when(transformationJobRepository.findById(jobId)).thenReturn(Optional.of(existingJob));
+        when(transformationJobRepository.save(any(TransformationJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(jobStatusService.updateStatus(jobId, "COMPLETED"))
+                .thenReturn(JobStatus.builder().id(jobId).documentId(documentId).status("COMPLETED").build());
+
+        transformationJobService.updateStatus(jobId, "The workflow completed successfully.");
+
+        verify(jobStatusService).updateStatus(jobId, "COMPLETED");
+    }
 }

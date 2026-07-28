@@ -109,6 +109,33 @@ class DocumentServiceTest {
     }
 
     @Test
+    void createWithFileAllowsUploadWhenSameFileNameIsUsedForDifferentTenant() throws Exception {
+        DocumentRequest request = new DocumentRequest();
+        request.setName("mapping.xml");
+        request.setType("XML");
+        request.setTenant("tenant-b");
+        request.setTransactionTypeCode("850");
+
+        MultipartFile file = new MockMultipartFile("file", "mapping.xml", "application/xml",
+                "<root />".getBytes(StandardCharsets.UTF_8));
+
+        when(documentRepository.findByNameIgnoreCase("mapping.xml"))
+                .thenReturn(Optional.of(DocumentRecord.builder()
+                        .id(UUID.randomUUID())
+                        .name("mapping.xml")
+                        .tenant("tenant-a")
+                        .build()));
+        when(documentRepository.save(any(DocumentRecord.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        DocumentResponse response = documentService.createWithFile(request, file);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getName()).isEqualTo("mapping.xml");
+        assertThat(response.getTenant()).isEqualTo("tenant-b");
+        verify(documentRepository).save(any(DocumentRecord.class));
+    }
+
+    @Test
     void createWithFileAllowsTxtUploadsToBypassDuplicateCheck() throws Exception {
         DocumentRequest request = new DocumentRequest();
         request.setName("notes.txt");

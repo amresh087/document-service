@@ -259,8 +259,8 @@ public class DocumentService {
         documentRepository.deleteById(id);
 
         // Clean up matching job status rows for any transformation jobs linked to this document
-        jobStatusService.deleteByDocumentId(id);
-        transformationJobService.deleteByDocumentId(id);
+        //jobStatusService.deleteByDocumentId(id);
+       // transformationJobService.deleteByDocumentId(id);
         
         // Publish Kafka event after successful deletion
         DocumentEventDTO eventDTO = DocumentEventDTO.builder()
