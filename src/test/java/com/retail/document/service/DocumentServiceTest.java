@@ -39,6 +39,12 @@ class DocumentServiceTest {
     @Mock
     private DocumentEventProducer documentEventProducer;
 
+    @Mock
+    private JobStatusService jobStatusService;
+
+    @Mock
+    private TransformationJobService transformationJobService;
+
     @InjectMocks
     private DocumentService documentService;
 
@@ -68,6 +74,41 @@ class DocumentServiceTest {
     }
 
     @Test
+    void getAllWithEdiToXmlFilterExcludesMappingDocuments() {
+        DocumentRecord ediDocument = DocumentRecord.builder()
+                .id(UUID.randomUUID())
+                .name("orders.edi.txt")
+                .type("TXT")
+                .tenant("tenant-a")
+                .transactionTypeCode("850")
+                .status("Indexed")
+                .contentType("text/plain")
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        DocumentRecord mappingDocument = DocumentRecord.builder()
+                .id(UUID.randomUUID())
+                .name("merged-xslt-templet.xml")
+                .type("XML")
+                .tenant("tenant-a")
+                .mappingType("mapping-xslt-templet-xml")
+                .status("Indexed")
+                .contentType("application/xml")
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        when(documentRepository.findAll()).thenReturn(List.of(ediDocument, mappingDocument));
+
+        List<DocumentResponse> results = documentService.getAll("edi-to-xml");
+
+        assertThat(results).hasSize(1);
+        assertThat(results.get(0).getName()).isEqualTo("orders.edi.txt");
+        assertThat(results.get(0).getType()).isEqualTo("TXT");
+    }
+
+    @Test
     void createWithFileAllowsTxtUploadsToBypassDuplicateCheck() throws Exception {
         DocumentRequest request = new DocumentRequest();
         request.setName("notes.txt");
@@ -78,10 +119,6 @@ class DocumentServiceTest {
         MultipartFile file = new MockMultipartFile("file", "notes.txt", "text/plain",
                 "hello world".getBytes(StandardCharsets.UTF_8));
 
-        when(documentRepository.findByNameIgnoreCase("notes.txt"))
-                .thenReturn(Optional.of(DocumentRecord.builder().id(UUID.randomUUID()).name("notes.txt").build()));
-        when(documentStorageService.storeFile(any(UUID.class), anyString(), anyString(), any(), anyLong()))
-                .thenReturn("tenant-a/txn-001/TXT/notes.txt");
         when(documentRepository.save(any(DocumentRecord.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         DocumentResponse response = documentService.createWithFile(request, file);

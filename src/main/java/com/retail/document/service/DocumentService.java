@@ -140,6 +140,8 @@ public class DocumentService {
             // attach job id to event and publish to the transformation topic
             eventDTO.setJobId(jobId);
             documentEventProducer.publishTransformationEvent(eventDTO);
+
+           // saved.setEdiXml(eventDTO.getpa);
         }
         
         return toResponse(saved);
@@ -151,6 +153,7 @@ public class DocumentService {
 
     public List<DocumentResponse> getAll(String mappingdoc) {
         boolean shouldFilterMappingDocs = "mappingdoc".equalsIgnoreCase(mappingdoc);
+        boolean shouldFilterEdiTransactions = "edi-to-xml".equalsIgnoreCase(mappingdoc);
 
         List<DocumentRecord> records = shouldFilterMappingDocs
                 ? documentRepository.findByMappingTypeIn(List.of(
@@ -158,7 +161,14 @@ public class DocumentService {
                         "idoc-output-sample"))
                 : documentRepository.findAll();
 
-        return records.stream()
+        List<DocumentRecord> filteredRecords = shouldFilterEdiTransactions
+                ? records.stream()
+                        .filter(record -> record.getMappingType() == null || record.getMappingType().isBlank()
+                                || !isSupportedMappingType(record.getMappingType()))
+                        .toList()
+                : records;
+
+        return filteredRecords.stream()
                 .map(record -> toResponse(record, shouldFilterMappingDocs))
                 .toList();
     }
@@ -167,6 +177,11 @@ public class DocumentService {
         DocumentRecord record = documentRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Document not found"));
         return toResponse(record);
+    }
+
+    public DocumentResponse getById(String id) {
+        UUID parsedId = parseUuid(id);
+        return getById(parsedId);
     }
 
     public DocumentResponse update(UUID id, DocumentRequest request) {
@@ -228,6 +243,11 @@ public class DocumentService {
         return toResponse(saved);
     }
 
+    public void delete(String id) {
+        UUID parsedId = parseUuid(id);
+        delete(parsedId);
+    }
+
     public void delete(UUID id) {
         DocumentRecord existing = documentRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Document not found"));
@@ -255,6 +275,17 @@ public class DocumentService {
                 .build();
         
         documentEventProducer.publishDocumentDeletedEvent(eventDTO);
+    }
+
+    private UUID parseUuid(String value) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("Document id is required");
+        }
+        try {
+            return UUID.fromString(value.trim());
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("Invalid document id format", ex);
+        }
     }
 
     private DocumentResponse toResponse(DocumentRecord record) {
