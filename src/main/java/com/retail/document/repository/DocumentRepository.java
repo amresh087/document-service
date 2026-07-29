@@ -13,7 +13,7 @@ import com.retail.document.entity.DocumentRecord;
 public interface DocumentRepository extends JpaRepository<DocumentRecord, UUID> {
     Optional<DocumentRecord> findByName(String name);
 
-    Optional<DocumentRecord> findByNameIgnoreCase(String name);
+    List<DocumentRecord> findByNameIgnoreCase(String name);
 
     List<DocumentRecord> findByMappingTypeIn(List<String> mappingTypes);
 }

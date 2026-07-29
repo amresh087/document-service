@@ -4,15 +4,16 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.retail.document.dto.DocumentEventDTO;
+import com.retail.document.dto.DocumentPageResponse;
 import com.retail.document.dto.DocumentRequest;
 import com.retail.document.dto.DocumentResponse;
-import com.retail.document.dto.JobStatusType;
 import com.retail.document.entity.DocumentRecord;
 import com.retail.document.kafka.DocumentEventProducer;
 import com.retail.document.repository.DocumentRepository;
@@ -26,7 +27,6 @@ public class DocumentService {
     private final DocumentStorageService documentStorageService;
     private final DocumentRepository documentRepository;
     private final DocumentEventProducer documentEventProducer;
-    private final JobStatusService jobStatusService;
     private final TransformationJobService transformationJobService;
 
     public DocumentResponse create(DocumentRequest request) {
@@ -73,11 +73,18 @@ public class DocumentService {
         String documentName = request.getName() != null ? request.getName().trim() : file.getOriginalFilename();
         boolean skipDuplicateCheck = isTextFile(documentName) || isTextFile(file.getOriginalFilename());
         if (!skipDuplicateCheck && documentName != null && !documentName.isBlank()) {
-            documentRepository.findByNameIgnoreCase(documentName)
-                    .ifPresent(existing -> {
-                        throw new ResponseStatusException(HttpStatus.CONFLICT,
-                                "File already exists. You can update it.");
-                    });
+            String requestedTenant = request.getTenant() != null ? request.getTenant().trim() : null;
+            List<DocumentRecord> existingDocuments = documentRepository.findByNameIgnoreCase(documentName);
+            boolean hasSameTenantConflict = existingDocuments.stream().anyMatch(existing -> {
+                boolean sameTenant = requestedTenant == null
+                        ? existing.getTenant() == null
+                        : requestedTenant.equalsIgnoreCase(existing.getTenant());
+                return sameTenant;
+            });
+            if (hasSameTenantConflict) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "File already exists. You can update it.");
+            }
         }
 
         UUID documentId = UUID.randomUUID();
@@ -149,6 +156,46 @@ public class DocumentService {
 
     public List<DocumentResponse> getAll() {
         return getAll(null);
+    }
+
+    public DocumentPageResponse getPage(String mappingdoc, int page, int size) {
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.max(size, 1);
+
+        boolean shouldFilterMappingDocs = "mappingdoc".equalsIgnoreCase(mappingdoc);
+        boolean shouldFilterEdiTransactions = "edi-to-xml".equalsIgnoreCase(mappingdoc);
+
+        List<DocumentRecord> records = shouldFilterMappingDocs
+                ? documentRepository.findByMappingTypeIn(List.of(
+                        "mapping-xslt-templet-xml",
+                        "idoc-output-sample"))
+                : documentRepository.findAll();
+
+        List<DocumentRecord> filteredRecords = shouldFilterEdiTransactions
+                ? records.stream()
+                        .filter(record -> record.getMappingType() == null || record.getMappingType().isBlank()
+                                || !isSupportedMappingType(record.getMappingType()))
+                        .toList()
+                : records;
+
+        int totalElements = filteredRecords.size();
+        int totalPages = (int) Math.ceil((double) totalElements / safeSize);
+        int fromIndex = Math.min(safePage * safeSize, totalElements);
+        int toIndex = Math.min(fromIndex + safeSize, totalElements);
+
+        List<DocumentResponse> items = filteredRecords.subList(fromIndex, toIndex).stream()
+                .map(record -> toResponse(record, shouldFilterMappingDocs))
+                .toList();
+
+        return DocumentPageResponse.builder()
+                .items(items)
+                .page(safePage)
+                .size(safeSize)
+                .totalElements(totalElements)
+                .totalPages(Math.max(totalPages, 1))
+                .hasNext(safePage + 1 < Math.max(totalPages, 1))
+                .hasPrevious(safePage > 0)
+                .build();
     }
 
     public List<DocumentResponse> getAll(String mappingdoc) {

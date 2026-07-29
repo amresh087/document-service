@@ -21,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.retail.document.dto.DocumentPageResponse;
 import com.retail.document.dto.DocumentRequest;
 import com.retail.document.dto.DocumentResponse;
 import com.retail.document.entity.DocumentRecord;
@@ -109,6 +110,46 @@ class DocumentServiceTest {
     }
 
     @Test
+    void getPageReturnsRequestedSliceAndPaginationMetadata() {
+        DocumentRecord firstDocument = DocumentRecord.builder()
+                .id(UUID.randomUUID())
+                .name("orders.edi.txt")
+                .type("TXT")
+                .tenant("tenant-a")
+                .transactionTypeCode("850")
+                .status("Indexed")
+                .contentType("text/plain")
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        DocumentRecord secondDocument = DocumentRecord.builder()
+                .id(UUID.randomUUID())
+                .name("invoices.edi.txt")
+                .type("TXT")
+                .tenant("tenant-a")
+                .transactionTypeCode("850")
+                .status("Indexed")
+                .contentType("text/plain")
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        when(documentRepository.findAll()).thenReturn(List.of(firstDocument, secondDocument));
+
+        DocumentPageResponse page = documentService.getPage("edi-to-xml", 0, 1);
+
+        assertThat(page.getItems()).hasSize(1);
+        assertThat(page.getItems().get(0).getName()).isEqualTo("orders.edi.txt");
+        assertThat(page.getPage()).isZero();
+        assertThat(page.getSize()).isEqualTo(1);
+        assertThat(page.getTotalElements()).isEqualTo(2);
+        assertThat(page.getTotalPages()).isEqualTo(2);
+        assertThat(page.isHasNext()).isTrue();
+        assertThat(page.isHasPrevious()).isFalse();
+    }
+
+    @Test
     void createWithFileAllowsUploadWhenSameFileNameIsUsedForDifferentTenant() throws Exception {
         DocumentRequest request = new DocumentRequest();
         request.setName("mapping.xml");
@@ -120,7 +161,7 @@ class DocumentServiceTest {
                 "<root />".getBytes(StandardCharsets.UTF_8));
 
         when(documentRepository.findByNameIgnoreCase("mapping.xml"))
-                .thenReturn(Optional.of(DocumentRecord.builder()
+                .thenReturn(List.of(DocumentRecord.builder()
                         .id(UUID.randomUUID())
                         .name("mapping.xml")
                         .tenant("tenant-a")

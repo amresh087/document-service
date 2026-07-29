@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.retail.document.dto.DocumentPageResponse;
 import com.retail.document.dto.DocumentRequest;
 import com.retail.document.dto.DocumentResponse;
 import com.retail.document.service.DocumentService;
@@ -36,6 +37,14 @@ public class DocumentController {
     @GetMapping
     public List<DocumentResponse> getAll(@RequestParam(value = "mappingdoc", required = false) String mappingdoc) {
         return documentService.getAll(mappingdoc);
+    }
+
+    @GetMapping("/page")
+    public DocumentPageResponse getPage(
+            @RequestParam(value = "mappingdoc", required = false) String mappingdoc,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return documentService.getPage(mappingdoc, page, size);
     }
 
     @GetMapping("/{id}")
